@@ -1,0 +1,54 @@
+version: '3'
+
+services:
+
+  tomcat-db-api:
+    image: backend
+    network_mode: host
+    depends_on:
+      - "mysql"
+      - "rabbit"
+  #    ports:
+  #        - "8088:8088"
+
+  rabbit:
+    image: rabbitmq
+    network_mode: host
+  #    ports:
+  #      - "5672:5672"
+
+  simulator:
+    image: simulator
+    network_mode: host
+    depends_on:
+      - "rabbit"
+      - "tomcat-db-api"
+
+  mysql:
+    image: mysql
+    container_name: mysql-container
+    restart: always
+    ports:
+      - "3306:3306"
+    command: --init-file /data/application/init.sql
+    volumes:
+      - ./init.sql:/data/application/init.sql
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+  frontend:
+    image: frontend
+    network_mode: host
+    depends_on:
+      - "tomcat-db-api"
+#      ports:
+#        - "8080:8080"
+
+  proxy:
+    container_name: eup_run_proxy
+    image: envoyproxy/envoy:v1.22.0
+    ports:
+      - 50051:50051
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    expose:
+      - 50051
